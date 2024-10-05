@@ -60,17 +60,17 @@ void ManageInput(precision**& al, precision*& b, int& n, int& p)
 		input >> b[i];
 	input.close();
 	input.open("matrix_al.txt");
-	al = new precision * [n];
+	al = new precision* [n];
 	for (int i = 0; i < n; i++)
 	{
-		al[i] = new precision[n];
-		for (int j = 0; j < n; j++)
+		al[i] = new precision[p+1];
+		for (int j = 0; j < p+1; j++)
 			input >> al[i][j];
 	}
 	input.close();
 }
 
-void CalculateDecomposition(precision**& al, precision*& b, const int& n, const int& p)
+void CalculateDecomposition(precision**& al, const int& n, const int& p)
 {
 	precision l_i_k = 0;
 	precision d_k_k = 0;
@@ -78,38 +78,24 @@ void CalculateDecomposition(precision**& al, precision*& b, const int& n, const 
 	precision sum_over_k = 0;
 	for (int i = 0; i < n; i++)
 	{
-		for (int j = 0; j < i + 1; j++)
+		for (int j = 0; j < i+1; j++)
 		{
-			if (i == j)
+			sum_over_k = 0;
+			for (int k = 0; k < j; k++)
 			{
-				sum_over_k = 0;
-				for (int k = 0; k < i; k++)
-				{
-					l_i_k = al[i][n - 1 - i + k];
-					d_k_k = al[k][n - 1];
-					sum_over_k += l_i_k * l_i_k * d_k_k;
-				}
-				al[i][n - 1] -= sum_over_k;
+				l_i_k = i-k <= p ? al[i][p - i + k] : 0;
+				d_k_k = al[k][p];
+				l_j_k = j - k <= p ? al[j][p - j + k] : 0;
+				sum_over_k += l_i_k * d_k_k * l_j_k;
 			}
-			else
-			{
-				sum_over_k = 0;
-				for (int k = 0; k < j; k++)
-				{
-					l_i_k = al[i][n - 1 - i + k];
-					d_k_k = al[k][n - 1];
-					l_j_k = al[j][n - 1 - j + k];
-					sum_over_k += l_i_k * d_k_k * l_j_k;
-				}
-				al[i][n - 1 - i + j] = (al[i][n - 1 - i + j] - sum_over_k) / al[j][n - 1];
-			}
+			al[i][p - i + j] = (al[i][p - i + j] - sum_over_k) / (i!=j ? al[j][p] : 1);
 		}
 	}
 }
 
-void PrintVariables(precision** al, precision* b, const int& n)
+void PrintVariables(precision** al, precision* b, const int& n,const int& p)
 {
-	std::cout << std::setprecision(3) << "n: " << n;
+	std::cout << std::setprecision(3) << "n: " << n << "p: " << p;
 	std::cout << "\nb: ";
 	for (int i = 0; i < n; i++)
 	{
@@ -118,97 +104,55 @@ void PrintVariables(precision** al, precision* b, const int& n)
 	std::cout << "\nal:\n";
 	for (int i = 0; i < n; i++)
 	{
-		for (int j = 0; j < n; j++)
+		for (int j = 0; j <p+1; j++)
 			std::cout << al[i][j] << '\t';
 		std::cout << "\n";
 	}
 	std::cout << "\n";
 }
 
-void DecompositionCheck(precision** al, const int& n)
+void SolveForX(precision** al, precision* b, const int& n, const int& p)
 {
-	precision** a = new precision * [n];
-	precision l_i_k = 0;
-	precision d_k_j = 0;
-	for (int i = 0; i < n; i++)
-	{
-		a[i] = new precision[n];
-		for (int j = 0; j < n; j++)
-		{
-			a[i][j] = 0;
-			for (int k = 0; k < n; k++)
-			{
-				l_i_k = i > k ? al[i][n - 1 - i + k] : (i < k ? 0 : 1);
-				d_k_j = k == j ? al[k][n - 1] : 0;
-				a[i][j] += l_i_k * d_k_j;
-			}
-		}
-	}
-	precision** b = new precision * [n];
-	for (int i = 0; i < n; i++)
-	{
-		b[i] = new precision[n];
-		for (int j = 0; j < n; j++)
-		{
-			b[i][j] = 0;
-			for (int k = 0; k < n; k++)
-			{
-				l_i_k = k > j ? 0 : (k < j ? al[j][n - 1 - j + k] : 1);
-				b[i][j] += a[i][k] * l_i_k;
-			}
-		}
-	}
-	for (int i = 0; i < n; i++)
-	{
-		for (int j = 0; j < n; j++)
-			std::cout << a[i][j] << '\t';
-		std::cout << "\n";
-	}
-	std::cout << "\n";
-	for (int i = 0; i < n; i++)
-	{
-		for (int j = 0; j < n; j++)
-		{
-			l_i_k = i > j ? 0 : (i < j ? al[j][n - 1 - j + i] : 1);
-			std::cout << l_i_k << '\t';
-		}
-		std::cout << "\n";
-	}
-	std::cout << "\n";
-	for (int i = 0; i < n; i++)
-	{
-		for (int j = 0; j < n; j++)
-			std::cout << b[i][j] << '\t';
-		std::cout << "\n";
-	}
-	for (int i = 0; i < n; i++)
-	{
-		delete[] a[i];
-		delete[] b[i];
-	}
-}
-
-void SolveForX(precision** al, precision* b, precision*& x, const int& n)
-{
-	x = new precision[n];
 	precision sum_over_k = 0;
+	precision l_i_k;
 	for (int i = 0; i < n; i++)
 	{
-		x[i] = 0;
 		sum_over_k = 0;
-		for (int k = 0; k < i; k++)
-			sum_over_k += al[i][n - 1 - i + k] * x[k];
-		x[i] = b[i] - sum_over_k;
+		for (int k = 0, jl = n-1-i; k < i; k++, jl++)
+		{
+			l_i_k = abs(i - k) <= p ? al[i][jl] : 0;
+			sum_over_k += l_i_k * b[k];
+		}
+		b[i] = b[i] - sum_over_k;
 	}
 
+	std::cout << "x: ";
+	for (int i = 0; i < n; i++)
+		std::cout << b[i] << ' ';
 	for (int i = n - 1; i >= 0; i--)
 	{
 		sum_over_k = 0;
-		for (int k = i + 1; k < n; k++)
-			sum_over_k += al[k][n - 1 - k + i] * b[k];
-		b[i] = x[i] / al[i][n - 1] - sum_over_k;
+		//pamagite
+		for (int k = i + 1, jl = n-1; k < n; k++, jl--)
+		{
+			l_i_k = abs(i - k) <= p ? al[k][n - 1 - k + i] : 0;
+			sum_over_k += l_i_k * b[k];
+		}
+		b[i] = b[i] / al[i][p] - sum_over_k;
 	}
 	std::cout << "x: ";
 	for (int i = 0; i < n; i++)
 		std::cout << b[i] << ' ';
+}
+
+void PrintFullMatrix(precision** al, const int& n, const int& p)
+{
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j <= i; j++)
+		{
+			std::cout << (i-j<=p ? al[i][p - i + j] : 0)<<'\t';
+		}
+		std::cout << '\n';
+	}
 }

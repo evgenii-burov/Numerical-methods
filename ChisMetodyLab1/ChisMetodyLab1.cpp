@@ -9,18 +9,19 @@ int main()
 		return 0;
 	precision** al = NULL;
 	precision* b = NULL;
-	precision* x = NULL;
 	int n = 0;
 	int p = 0;
 	ManageInput(al, b, n, p);
-	PrintVariables(al, b, n);
-	CalculateDecomposition(al, b, n, p);
-	PrintVariables(al, b, n);
+	//PrintFullMatrix(al, n, p);
+	PrintVariables(al, b, n, p);
+	CalculateDecomposition(al, n, p);
+	PrintVariables(al, b, n, p);
 	//DecompositionCheck(al, n);
-	SolveForX(al, b, x, n);
-	for (int i = 0; i < n; i++)
-		delete[] al[i];
+	//SolveForX(al, b, n, p);
+	//for (int i = 0; i < n; i++)
+	//{
+	//	delete[] al[i];
+	//}
 	delete[] al;
 	delete[] b;
-	delete[] x;
 }
