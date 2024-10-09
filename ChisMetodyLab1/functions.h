@@ -14,6 +14,8 @@ void CalculateDecomposition(precision**& al, const int& n, const int& p);
 
 void PrintVariables(precision** al, precision* b, const int& n, const int& p);
 
-void SolveForX(precision** al, precision* b, const int& n, const int& p);
+void SolveForX(precision** al, precision* &b, const int& n, const int& p);
 
 void PrintFullMatrix(precision** al, const int& n, const int& p);
+
+void CalculateError(precision**& al, precision* b, const int& n, const int& p);
