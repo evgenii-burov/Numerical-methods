@@ -34,7 +34,7 @@ int CreateMatrixFiles()
 		for (int i = 0; i < n; i++)
 		{
 			for (int j = 0; j < p+1; j++)
-				output << (p  - i > j ? 0 : int(10 * double(rand()) / RAND_MAX)+1) << '\t'; //(j + i + 1))
+				output << (p  - i > j ? 0 : (j + i + 1)) << '\t'; //(j + i + 1))
 			//10*double(rand())/RAND_MAX)
 			//(rand()/RAND_MAX + 3)*4
 			output << '\n';
@@ -45,7 +45,7 @@ int CreateMatrixFiles()
 
 	output.open("vector_b.txt");
 	for (int i = 0; i < n; i++)
-		output << i + 1 << '\t';
+		output << i*1.5 + 1 << '\t';
 	output.close();
 }
 
@@ -54,8 +54,6 @@ void ManageInput(precision**& al, precision*& b, int& n, int& p)
 	std::ifstream input;
 	input.open("dimension,p,matrix_type.txt");
 	input >> n >> p;
-	//if (!input.is_open())
-	//	std::cout << "\nNo file\n";
 	input.close();
 	input.open("vector_b.txt");
 	b = new precision[n];
@@ -81,24 +79,27 @@ void CalculateDecomposition(precision**& al, const int& n, const int& p)
 	precision sum_over_k = 0;
 	for (int i = 0; i < n; i++)
 	{
-		for (int j = 0; j < i+1; j++)
+		for (int j = 0, lij=p-i; j < i; lij++, j++)
 		{
 			sum_over_k = 0;
-			for (int k = 0; k < j; k++)
+			for (int k = j-1, lik = p - i+j-1, ljk = p - 1; k>=0 && lik >=0; k--, lik--, ljk--)
 			{
-				l_i_k = i - k <= p ? (i!=k? al[i][p - i + k]:1) : 0; //al[i][p - i + k]
-				d_k_k = al[k][p];
-				l_j_k = j - k <= p ? (j != k ? al[j][p - j + k] : 1) : 0;
-				sum_over_k += l_i_k * d_k_k * l_j_k;
+				sum_over_k += al[i][lik] * al[k][p] * al[j][ljk];
 			}
-			al[i][p - i + j] = (al[i][p - i + j] - sum_over_k) / (i!=j ? (al[j][p]==0? 1: al[j][p]) : 1);
+			al[i][lij] = (al[i][lij] - sum_over_k) / al[j][p];
 		}
+		sum_over_k = 0;
+		for (int k = i - 1, lik = p - 1; k >= 0 && lik >= 0; k--, lik--)
+		{
+			sum_over_k += al[i][lik] * al[k][p] * al[i][lik];
+		}
+		al[i][p] = (al[i][p] - sum_over_k);
 	}
 }
 
 void PrintVariables(precision** al, precision* b, const int& n,const int& p)
 {
-	std::cout << std::setprecision(3) << "n: " << n << "p: " << p;
+	std::cout << std::setprecision(4) << "n: " << n << "\tp: " << p;
 	std::cout << "\nb: ";
 	for (int i = 0; i < n; i++)
 	{
@@ -116,39 +117,37 @@ void PrintVariables(precision** al, precision* b, const int& n,const int& p)
 
 void SolveForX(precision** al, precision* &b, const int& n, const int& p)
 {
-	precision l_i_k;
-	precision l_k_i;
 	precision sum_over_k = 0;
 	for (int i = 0; i < n; i++)
 	{
 		sum_over_k = 0;
-		for (int k = 0; k < i; k++)
+		for (int lk = 0, k = i-p; lk < p; k++, lk++)
 		{
-			l_i_k = i - k <= p ? (i!=k ? al[i][p - i + k] : 1) : 0;
-			sum_over_k += l_i_k * b[k];
+			sum_over_k += al[i][lk] * b[k];
 		}
-		b[i] = b[i] - sum_over_k;
+		b[i] -= sum_over_k;
 	}
-	std::cout << "x: ";
-	for (int i = 0; i < n; i++)
-		std::cout << b[i] << ' ';
 	for (int i = n - 1; i >= 0; i--)
 	{
 		sum_over_k = 0;
-		for (int k = i + 1; k < n; k++) // was k < n
+		for (int k = i + 1, li = p - 1; k < n && k <=p+i; k++, li--)//int k = i + 1; k < n; k++
 		{
-			l_k_i = k - i <= p ? (i!=k? al[k][p - k + i] : 1) : 0; //al[k][p - k + i]
-			std::cout << '\n' << k << ' ' << i << ' ' << l_k_i << '\n';
-			sum_over_k += l_k_i * b[k];
+			sum_over_k += al[k][li] * b[k];
 		}
 		b[i] = b[i] / al[i][p] - sum_over_k;
 	}
 	std::cout << "x: ";
 	for (int i = 0; i < n; i++)
 		std::cout << b[i] << ' ';
+	std::ofstream output;
+	output.open("vector_x.txt");
+	output << std::setprecision(4);
+	for (int i = 0; i < n; i++)
+		output << b[i] << ' ';
+	output.close();
 }
 
-void PrintFullMatrix(precision** al, const int& n, const int& p)
+void PrintDenseMatrix(precision** al, const int& n, const int& p)
 {
 	for (int i = 0; i < n; i++)
 	{
@@ -157,32 +156,5 @@ void PrintFullMatrix(precision** al, const int& n, const int& p)
 			std::cout << (i-j<=p ? al[i][p - i + j] : 0)<<'\t';
 		}
 		std::cout << "\n\n";
-	}
-}
-
-void CalculateError(precision**& al, precision* b, const int& n, const int& p)
-{
-	std::ifstream input;
-	input.open("matrix_al.txt");
-	for (int i = 0; i < n; i++)
-	{
-		for (int j = 0; j < p + 1; j++)
-			input >> al[i][j];
-	}
-	input.close();
-
-	precision l_i_j = 0;
-	precision elem = 0;
-	std::cout << '\n';
-	for (int i = 0; i < n; i++)
-	{
-		elem = 0;
-		for (int j = 0; j < n; j++)
-		{
-			l_i_j = abs(i - j) <= p ? (i>j?al[i][p - i + j] : al[j][p - j + i]) : 0;
-			std::cout << al[i][p - i + j] << ' ';
-			elem += l_i_j * b[i];
-		}
-		std::cout << '\n' << elem << ' ';
 	}
 }
